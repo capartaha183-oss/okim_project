@@ -1,6 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+
+import '../core/app_colors.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -12,35 +14,41 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final LocalAuthentication auth = LocalAuthentication();
-  final TextEditingController passwordController = TextEditingController();
+  final FlutterSecureStorage storage = const FlutterSecureStorage();
+  final TextEditingController passController = TextEditingController();
 
-  bool hidePassword = true;
+  bool obscure = true;
   bool loading = false;
-  final String correctPassword = "1234";
 
-  Future<void> biometricLogin() async {
+  Future<void> loginWithBiometric() async {
+    final enabled = await storage.read(key: "biometric_enabled");
+    if (enabled == "false") {
+      showMsg("Biyometrik giriş kapalı.");
+      return;
+    }
+
     try {
       setState(() => loading = true);
 
-      final bool success = await auth.authenticate(
-        localizedReason: 'OKIM uygulamasına giriş yapmak için doğrulama yap',
+      final bool ok = await auth.authenticate(
+        localizedReason: 'OKIM sistemine giriş yapmak için doğrulama yapın',
       );
 
-      if (success) {
-        goHome();
-      }
-    } catch (e) {
-      showMessage("Bu cihazda biyometrik giriş desteklenmeyebilir.");
+      if (ok) goHome();
+    } catch (_) {
+      showMsg("Biyometrik doğrulama kullanılamıyor.");
     } finally {
-      setState(() => loading = false);
+      if (mounted) setState(() => loading = false);
     }
   }
 
-  void passwordLogin() {
-    if (passwordController.text.trim() == correctPassword) {
+  Future<void> loginWithPassword() async {
+    final savedPass = await storage.read(key: "app_password") ?? "1234";
+
+    if (passController.text.trim() == savedPass) {
       goHome();
     } else {
-      showMessage("Şifre yanlış. Varsayılan şifre: 1234");
+      showMsg("Şifre hatalı.");
     }
   }
 
@@ -51,171 +59,109 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void showMessage(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text)),
-    );
+  void showMsg(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  @override
+  void dispose() {
+    passController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFFDEFF4),
-              Color(0xFFE9F0FF),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-              child: Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxWidth: 420),
-                padding: const EdgeInsets.all(26),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            children: [
+              const SizedBox(height: 22),
+              Container(
+                width: 86,
+                height: 86,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 30,
-                      offset: const Offset(0, 18),
-                    ),
-                  ],
+                  gradient: AppColors.mainGradient,
+                  borderRadius: BorderRadius.circular(22),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 75,
-                      color: Color(0xFFFFC107),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      "OKIM",
-                      style: TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF2D4F8F),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      "Güvenli giriş yap",
-                      style: TextStyle(color: Colors.black54),
-                    ),
-                    const SizedBox(height: 28),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: loading ? null : biometricLogin,
-                        icon: const Icon(Icons.fingerprint_rounded),
-                        label: Text(
-                          loading
-                              ? "Kontrol ediliyor..."
-                              : "Face ID / Parmak İzi",
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2D4F8F),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    Row(
-                      children: const [
-                        Expanded(child: Divider()),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text("veya"),
-                        ),
-                        Expanded(child: Divider()),
-                      ],
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    TextField(
-                      controller: passwordController,
-                      obscureText: hidePassword,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: "Şifre gir",
-                        prefixIcon: const Icon(Icons.lock_rounded),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            hidePassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              hidePassword = !hidePassword;
-                            });
-                          },
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: passwordLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF4D7D),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: const Text(
-                          "Şifre ile Giriş Yap",
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-                    const Text(
-                      "Varsayılan şifre: 1234",
-                      style: TextStyle(color: Colors.black45, fontSize: 13),
-                    ),
-                  ],
+                child: const Icon(
+                  Icons.verified_user_rounded,
+                  color: Colors.white,
+                  size: 44,
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
+              const Text(
+                "OKIM Mobil Giriş",
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 27,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 30),
+              TextField(
+                controller: passController,
+                obscureText: obscure,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: "Mobil şifrenizi girin",
+                  prefixIcon: const Icon(Icons.lock_rounded),
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => obscure = !obscure),
+                    icon: Icon(
+                      obscure
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: loading ? null : loginWithPassword,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text(
+                    "Giriş Yap",
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: loading ? null : loginWithBiometric,
+                  icon: const Icon(Icons.fingerprint_rounded),
+                  label: Text(
+                    loading ? "Doğrulanıyor..." : "Biyometrik Doğrulama",
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "Varsayılan şifre: 1234",
+                style: TextStyle(
+                  color: AppColors.subtitle,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ),

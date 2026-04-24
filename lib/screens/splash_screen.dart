@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../core/app_colors.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -12,8 +13,8 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController controller;
-  late Animation<double> scaleAnim;
-  late Animation<double> opacityAnim;
+  late Animation<double> fade;
+  late Animation<double> slide;
 
   @override
   void initState() {
@@ -21,15 +22,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1300),
     );
 
-    scaleAnim = Tween<double>(begin: 0.6, end: 1).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeOutBack),
-    );
+    fade = CurvedAnimation(parent: controller, curve: Curves.easeOut);
 
-    opacityAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeIn),
+    slide = Tween<double>(begin: 24, end: 0).animate(
+      CurvedAnimation(parent: controller, curve: Curves.easeOutCubic),
     );
 
     controller.forward();
@@ -48,51 +47,144 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  Widget logoBox() {
+    return Container(
+      width: 118,
+      height: 118,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Icon(
+            Icons.verified_user_rounded,
+            size: 62,
+            color: AppColors.primary,
+          ),
+          Positioned(
+            right: 20,
+            bottom: 22,
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: const BoxDecoration(
+                color: AppColors.accent,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.primary,
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFFDEFF4),
-              Color(0xFFF8E8EE),
-              Color(0xFFE9F0FF),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: AppColors.mainGradient,
         ),
-        child: Center(
+        child: SafeArea(
           child: FadeTransition(
-            opacity: opacityAnim,
-            child: ScaleTransition(
-              scale: scaleAnim,
+            opacity: fade,
+            child: AnimatedBuilder(
+              animation: slide,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0, slide.value),
+                  child: child,
+                );
+              },
               child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(
-                    Icons.star_rounded,
-                    size: 100,
-                    color: Color(0xFFFFC107),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
+                children: [
+                  const Spacer(),
+
+                  logoBox(),
+
+                  const SizedBox(height: 28),
+
+                  const Text(
                     "OKIM",
                     style: TextStyle(
-                      fontSize: 42,
+                      color: Colors.white,
+                      fontSize: 38,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF2D4F8F),
-                      letterSpacing: 2,
+                      letterSpacing: 1.4,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Premium Experience",
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    "Kişi Tanıma ve Güvenli Bilgi Sistemi",
+                    textAlign: TextAlign.center,
                     style: TextStyle(
+                      color: Colors.white70,
                       fontSize: 15,
-                      color: Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 34),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(100),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: const Text(
+                      "Güvenli bağlantı hazırlanıyor...",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 22),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: AppColors.accent,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "OKIM Mobil Hizmetler",
+                          style: TextStyle(
+                            color: Colors.white60,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'core/app_colors.dart';
 import 'screens/splash_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const OkimApp());
 }
 
@@ -11,15 +13,15 @@ class OkimApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'OKIM',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF8E8EE),
-        fontFamily: 'Arial',
+        scaffoldBackgroundColor: AppColors.background,
+        fontFamily: 'SF Pro Display',
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4A6FB3),
+          seedColor: AppColors.primary,
         ),
+        useMaterial3: true,
       ),
       home: const SplashScreen(),
     );
