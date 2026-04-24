@@ -14,7 +14,7 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController controller;
   late Animation<double> fade;
-  late Animation<double> slide;
+  late Animation<double> scale;
 
   @override
   void initState() {
@@ -22,13 +22,19 @@ class _SplashScreenState extends State<SplashScreen>
 
     controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1300),
+      duration: const Duration(milliseconds: 1400),
     );
 
-    fade = CurvedAnimation(parent: controller, curve: Curves.easeOut);
+    fade = CurvedAnimation(
+      parent: controller,
+      curve: Curves.easeOut,
+    );
 
-    slide = Tween<double>(begin: 24, end: 0).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeOutCubic),
+    scale = Tween<double>(begin: 0.82, end: 1).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: Curves.easeOutBack,
+      ),
     );
 
     controller.forward();
@@ -36,7 +42,9 @@ class _SplashScreenState extends State<SplashScreen>
     Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
       );
     });
   }
@@ -48,41 +56,48 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget logoBox() {
-    return Container(
-      width: 118,
-      height: 118,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Icon(
-            Icons.verified_user_rounded,
-            size: 62,
-            color: AppColors.primary,
-          ),
-          Positioned(
-            right: 20,
-            bottom: 22,
-            child: Container(
-              width: 16,
-              height: 16,
-              decoration: const BoxDecoration(
-                color: AppColors.accent,
-                shape: BoxShape.circle,
-              ),
+    return ScaleTransition(
+      scale: scale,
+      child: Container(
+        width: 128,
+        height: 128,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(34),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.14),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
             ),
+          ],
+        ),
+        child: const Icon(
+          Icons.shield_rounded,
+          size: 62,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget bottomLoader() {
+    return Container(
+      width: 180,
+      height: 8,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          width: 110,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -90,105 +105,70 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
-          gradient: AppColors.mainGradient,
+          gradient: AppColors.deepGradient,
         ),
         child: SafeArea(
           child: FadeTransition(
             opacity: fade,
-            child: AnimatedBuilder(
-              animation: slide,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(0, slide.value),
-                  child: child,
-                );
-              },
-              child: Column(
-                children: [
-                  const Spacer(),
+            child: Column(
+              children: [
+                const Spacer(),
 
-                  logoBox(),
+                logoBox(),
 
-                  const SizedBox(height: 28),
+                const SizedBox(height: 28),
 
-                  const Text(
-                    "OKIM",
+                const Text(
+                  "OKIM",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 40,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  "Akıllı Güvenlik ve Dijital Hizmet Platformu",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 34),
+
+                bottomLoader(),
+
+                const Spacer(),
+
+                Container(
+                  margin: const EdgeInsets.only(bottom: 28),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: const Text(
+                    "Güvenli bağlantı hazırlanıyor...",
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 38,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
                   ),
-
-                  const SizedBox(height: 8),
-
-                  const Text(
-                    "Kişi Tanıma ve Güvenli Bilgi Sistemi",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  const SizedBox(height: 34),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(100),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.22),
-                      ),
-                    ),
-                    child: const Text(
-                      "Güvenli bağlantı hazırlanıyor...",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 22),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: AppColors.accent,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          "OKIM Mobil Hizmetler",
-                          style: TextStyle(
-                            color: Colors.white60,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

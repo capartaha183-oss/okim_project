@@ -20,8 +20,19 @@ class _LoginScreenState extends State<LoginScreen> {
   bool obscure = true;
   bool loading = false;
 
+  Future<void> loginWithPassword() async {
+    final savedPass = await storage.read(key: "app_password") ?? "1234";
+
+    if (passController.text.trim() == savedPass) {
+      goHome();
+    } else {
+      showMsg("Şifre hatalı.");
+    }
+  }
+
   Future<void> loginWithBiometric() async {
     final enabled = await storage.read(key: "biometric_enabled");
+
     if (enabled == "false") {
       showMsg("Biyometrik giriş kapalı.");
       return;
@@ -30,8 +41,8 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       setState(() => loading = true);
 
-      final bool ok = await auth.authenticate(
-        localizedReason: 'OKIM sistemine giriş yapmak için doğrulama yapın',
+      final ok = await auth.authenticate(
+        localizedReason: "OKIM sistemine giriş yapmak için doğrulama yapın",
       );
 
       if (ok) goHome();
@@ -39,16 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
       showMsg("Biyometrik doğrulama kullanılamıyor.");
     } finally {
       if (mounted) setState(() => loading = false);
-    }
-  }
-
-  Future<void> loginWithPassword() async {
-    final savedPass = await storage.read(key: "app_password") ?? "1234";
-
-    if (passController.text.trim() == savedPass) {
-      goHome();
-    } else {
-      showMsg("Şifre hatalı.");
     }
   }
 
@@ -60,7 +61,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void showMsg(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text)),
+    );
   }
 
   @override
@@ -69,100 +72,171 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Widget logoHeader() {
+    return Column(
+      children: [
+        Container(
+          width: 92,
+          height: 92,
+          decoration: BoxDecoration(
+            gradient: AppColors.mainGradient,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.25),
+                blurRadius: 28,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.shield_rounded,
+            color: Colors.white,
+            size: 48,
+          ),
+        ),
+        const SizedBox(height: 18),
+        const Text(
+          "OKIM Giriş",
+          style: TextStyle(
+            color: AppColors.text,
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          "Güvenli dijital hizmetlere erişim",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppColors.subtitle,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget loginCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: passController,
+            obscureText: obscure,
+            decoration: InputDecoration(
+              hintText: "Mobil şifrenizi girin",
+              prefixIcon: const Icon(Icons.lock_rounded),
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => obscure = !obscure),
+                icon: Icon(
+                  obscure
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                ),
+              ),
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: loading ? null : loginWithPassword,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: const Text(
+                "Giriş Yap",
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: OutlinedButton.icon(
+              onPressed: loading ? null : loginWithBiometric,
+              icon: const Icon(Icons.fingerprint_rounded),
+              label: Text(
+                loading ? "Doğrulanıyor..." : "Biyometrik Doğrulama",
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary, width: 1.2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            children: [
-              const SizedBox(height: 22),
-              Container(
-                width: 86,
-                height: 86,
-                decoration: BoxDecoration(
-                  gradient: AppColors.mainGradient,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: const Icon(
-                  Icons.verified_user_rounded,
-                  color: Colors.white,
-                  size: 44,
-                ),
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            const SizedBox(height: 28),
+            logoHeader(),
+            const SizedBox(height: 34),
+            loginCard(),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(22),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                "OKIM Mobil Giriş",
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 27,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 30),
-              TextField(
-                controller: passController,
-                obscureText: obscure,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: "Mobil şifrenizi girin",
-                  prefixIcon: const Icon(Icons.lock_rounded),
-                  suffixIcon: IconButton(
-                    onPressed: () => setState(() => obscure = !obscure),
-                    icon: Icon(
-                      obscure
-                          ? Icons.visibility_off_rounded
-                          : Icons.visibility_rounded,
+              child: const Row(
+                children: [
+                  Icon(Icons.info_rounded, color: AppColors.primary),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Varsayılan şifre: 1234",
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+                ],
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: loading ? null : loginWithPassword,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text(
-                    "Giriş Yap",
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: OutlinedButton.icon(
-                  onPressed: loading ? null : loginWithBiometric,
-                  icon: const Icon(Icons.fingerprint_rounded),
-                  label: Text(
-                    loading ? "Doğrulanıyor..." : "Biyometrik Doğrulama",
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                "Varsayılan şifre: 1234",
-                style: TextStyle(
-                  color: AppColors.subtitle,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
