@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:screen_protector/screen_protector.dart';
 import 'package:xml/xml.dart';
+
 import '../core/app_colors.dart';
 
 class MessagesScreen extends StatefulWidget {
@@ -17,18 +18,39 @@ class _MessagesScreenState extends State<MessagesScreen> {
   List<NewsItem> news = [];
 
   final List<String> rssUrls = [
-  "https://www.aa.com.tr/tr/rss/default?cat=guncel",
-  "https://www.aa.com.tr/tr/rss/default?cat=dunya",
-  "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
-  "https://www.aa.com.tr/tr/rss/default?cat=spor",
-  "https://www.aa.com.tr/tr/rss/default?cat=bilim-teknoloji",
-];
+    "https://www.aa.com.tr/tr/rss/default?cat=guncel",
+    "https://www.aa.com.tr/tr/rss/default?cat=dunya",
+    "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
+    "https://www.aa.com.tr/tr/rss/default?cat=spor",
+    "https://www.aa.com.tr/tr/rss/default?cat=bilim-teknoloji",
+    "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "https://feeds.bbci.co.uk/news/technology/rss.xml",
+  ];
 
   @override
   void initState() {
     super.initState();
     enableProtection();
     fetchAllNews();
+  }
+
+  String cleanText(String text) {
+    return text
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&apos;', "'")
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&#8217;', "'")
+        .replaceAll('&#8220;', '"')
+        .replaceAll('&#8221;', '"')
+        .replaceAll('&#8211;', '-')
+        .replaceAll('&#8212;', '-')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   Future<void> enableProtection() async {
@@ -61,11 +83,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
           final items = document.findAllElements("item");
 
           for (final item in items) {
-            final title = item.getElement("title")?.innerText.trim() ?? "";
-            final description =
-                item.getElement("description")?.innerText.trim() ?? "";
+            final title = cleanText(
+              item.getElement("title")?.innerText.trim() ?? "",
+            );
+
+            final description = cleanText(
+              item.getElement("description")?.innerText.trim() ?? "",
+            );
+
             final link = item.getElement("link")?.innerText.trim() ?? "";
-            final pubDate = item.getElement("pubDate")?.innerText.trim() ?? "";
+            final pubDate = cleanText(
+              item.getElement("pubDate")?.innerText.trim() ?? "",
+            );
 
             String imageUrl = "";
 
@@ -75,9 +104,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
             }
 
             if (imageUrl.isEmpty) {
-              final mediaContent = item.findElements("media:content").firstOrNull;
+              final mediaContent =
+                  item.findElements("media:content").firstOrNull;
               if (mediaContent != null) {
                 imageUrl = mediaContent.getAttribute("url") ?? "";
+              }
+            }
+
+            if (imageUrl.isEmpty) {
+              final mediaThumbnail =
+                  item.findElements("media:thumbnail").firstOrNull;
+              if (mediaThumbnail != null) {
+                imageUrl = mediaThumbnail.getAttribute("url") ?? "";
               }
             }
 
@@ -97,8 +135,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
       } catch (_) {}
     }
 
+    final uniqueNews = <String, NewsItem>{};
+    for (final item in allNews) {
+      uniqueNews[item.title] = item;
+    }
+
     setState(() {
-      news = allNews;
+      news = uniqueNews.values.toList();
       loading = false;
     });
   }
@@ -106,8 +149,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
   List<NewsItem> get filteredNews {
     if (searchText.trim().isEmpty) return news;
 
+    final q = searchText.toLowerCase();
+
     return news.where((item) {
-      final q = searchText.toLowerCase();
       return item.title.toLowerCase().contains(q) ||
           item.description.toLowerCase().contains(q);
     }).toList();
@@ -117,6 +161,23 @@ class _MessagesScreenState extends State<MessagesScreen> {
   void dispose() {
     disableProtection();
     super.dispose();
+  }
+
+  Widget placeholderImage() {
+    return Container(
+      height: 170,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: AppColors.mainGradient,
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.newspaper_rounded,
+          color: Colors.white,
+          size: 48,
+        ),
+      ),
+    );
   }
 
   Widget newsCard(NewsItem item) {
@@ -138,16 +199,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (item.imageUrl.isNotEmpty)
-              Image.network(
-                item.imageUrl,
-                height: 170,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const SizedBox.shrink();
-                },
-              ),
+            item.imageUrl.isNotEmpty
+                ? Image.network(
+                    item.imageUrl,
+                    height: 170,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return placeholderImage();
+                    },
+                  )
+                : placeholderImage(),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -173,7 +235,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    item.title,
+                    cleanText(item.title),
                     style: const TextStyle(
                       color: AppColors.text,
                       fontSize: 17,
@@ -182,9 +244,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    item.description
-                        .replaceAll(RegExp(r'<[^>]*>'), '')
-                        .trim(),
+                    cleanText(item.description),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -196,7 +256,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   if (item.date.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Text(
-                      item.date,
+                      cleanText(item.date),
                       style: const TextStyle(
                         color: AppColors.subtitle,
                         fontSize: 11,
@@ -208,6 +268,57 @@ class _MessagesScreenState extends State<MessagesScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget headerCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: AppColors.mainGradient,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.security_rounded,
+            color: Colors.white,
+            size: 34,
+          ),
+          SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              "Koruma modu aktif. Haber akışı gizli alanda görüntüleniyor.",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget searchBox() {
+    return TextField(
+      onChanged: (value) {
+        setState(() {
+          searchText = value;
+        });
+      },
+      decoration: InputDecoration(
+        hintText: "Haberlerde ara...",
+        prefixIcon: const Icon(Icons.search_rounded),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
         ),
       ),
     );
@@ -240,52 +351,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
           padding: const EdgeInsets.fromLTRB(22, 10, 22, 22),
           child: Column(
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: AppColors.mainGradient,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.security_rounded,
-                      color: Colors.white,
-                      size: 34,
-                    ),
-                    SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        "Koruma modu aktif. Haber akışı gizli alanda görüntüleniyor.",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              headerCard(),
               const SizedBox(height: 16),
-              TextField(
-                onChanged: (value) {
-                  setState(() {
-                    searchText = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: "Haberlerde ara...",
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
+              searchBox(),
               const SizedBox(height: 16),
               Expanded(
                 child: loading
